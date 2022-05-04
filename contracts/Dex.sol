@@ -66,26 +66,65 @@ contract Dex is Wallet {
     } 
 
     function createMarketOrder(uint256 _amount, bytes32 _ticker, Side _side) public {
+
+        if(_side == Side.SELL){
+            require(balances[msg.sender][_ticker] >= _amount, "Insuffient balance");
+        }
         uint orderBookSide;
-        if(_side == Side.BUY){
-            orderBookSide=1;
+        if (_side == Side.BUY){
+            orderBookSide = 1;
         }
         else{
-            require(balances[msg.sender][_ticker] >= _amount,"Insufficient amount of tokens");
-            orderBookSide=0;
+            orderBookSide = 0;
         }
         Order[] storage orders = orderBook[_ticker][orderBookSide];
-        uint totalFilled;
+        uint totalFilled = 0;
 
-        for(uint i = 0; i< orders.length && totalFilled < _amount; i++){
-           if(orders[i].amount.sub(orders[i].filled) > _amount.sub(totalFilled)){
-               orders[i].filled = orders[i].filled.add(_amount);
-               totalFilled = totalFilled.add(_amount);
-           } 
-        }
+        for (uint256 i = 0; i < orders.length && totalFilled < _amount ; i++){
+            //run loop until orders completely filled or orderbook empty
+            uint leftToFill = _amount.sub(totalFilled);
+            uint availableToFill = orders[i].amount.sub(orders[i].filled);
+            uint filled = 0;
+            if(availableToFill > leftToFill){
+                filled = leftToFill;
+            }
+            else{
+                filled = availableToFill;
+            }
 
+            totalFilled = totalFilled.add(filled);
+            orders[i].filled = orders[i].filled.add(filled);
+            uint cost = filled.mul(orders[i].price);
+            if(_side == Side.BUY){
+                //Verify that the buyer has enough ETH to cover the purchase (require)
+                require(balances[msg.sender]["ETH"] >= cost);
+                //msg.sender is the buyer
+                balances[msg.sender][_ticker] = balances[msg.sender][_ticker].add(filled);
+                balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].sub(cost);
+                
+                balances[orders[i].trader][_ticker] = balances[orders[i].trader][_ticker].sub(filled);
+                balances[orders[i].trader]["ETH"] = balances[orders[i].trader]["ETH"].add(cost);
+            }
+            else if(_side == Side.SELL){
+                //Msg.sender is the seller
+                balances[msg.sender][_ticker] = balances[msg.sender][_ticker].sub(filled);
+                balances[msg.sender]["ETH"] = balances[msg.sender]["ETH"].add(cost);
+                balances[orders[i].trader][_ticker] = balances[orders[i].trader][_ticker].add(filled);
+                balances[orders[i].trader]["ETH"] = balances[orders[i].trader]["ETH"].sub(cost);
+            }
+       
     }
+    //uses alot of gas for sorting try to optimize
+            while(orders.length > 0 && orders[0].filled == orders[0].amount){
+                //Remove the top element in the orders array by overwriting every element
+                // with the next element in the order list
+                for (uint256 i = 0; i < orders.length - 1; i++) {
+                    orders[i] = orders[i + 1];
+                }
+                orders.pop();
+        }
 
     
 
+}
 }

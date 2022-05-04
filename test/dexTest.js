@@ -97,19 +97,7 @@ contract("Dex", accounts => {
 
     
     })
-    it.skip("Orders can be submitted even if the order book is empty ", async() => {
-        let dex = await Dex.deployed();
 
-
-    
-    })
-    it.skip("Orders should be filled until the order book is empty or order is 100% filled", async() => {
-
-
-
-
-    
-    })
     it.skip("Eth balance decreases after transaction ", async() => {
         let dex = await Dex.deployed();
         dex.depositEth({from:accounts[0],value:25})
@@ -118,13 +106,7 @@ contract("Dex", accounts => {
         assert(preBal < web3.eth.getBalance(accounts[0]));
     
     })
-    it.skip("Filled limit orders should be removed from book ", async() => {
-        let dex = await Dex.deployed();
 
-
-
-    
-    })
 
 
 
